@@ -18,6 +18,14 @@ import type { GrantInput, GrantRecord, GrantRepository } from '../domain/ports';
  * `enqueue` takes this method's transaction client. It does not open its own,
  * and it refuses a client with no `BEGIN` on it, so the guarantee cannot be
  * lost by wiring this up carelessly.
+ *
+ * The graph edge is written in that same transaction, and that is the strongest
+ * argument this repository found for keeping the knowledge graph in Postgres
+ * rather than beside it. An external graph store is necessarily a projection:
+ * it is updated after the write commits, so there is a window where the two
+ * disagree, and closing that window costs an ordering constraint on cache
+ * invalidation (ADR-0003 has the bug that constraint exists to prevent). A
+ * graph in the same database has no window, because it is the same commit.
  */
 export class PostgresGrantRepository implements GrantRepository {
   constructor(private readonly pool: Pool) {}
@@ -43,6 +51,23 @@ export class PostgresGrantRepository implements GrantRepository {
         const existing = await this.find(input);
         return { grant: existing!, seq: await this.currentSeq() };
       }
+
+      // The nodes are normally already there — `PgKgProjector.rebuild` puts
+      // them there at boot. Ensuring them here means a grant naming an entity
+      // created since the last rebuild writes an edge instead of failing a
+      // foreign key, which is the difference between a self-healing projection
+      // and one that needs a restart.
+      await client.query(
+        `INSERT INTO kg_nodes (id, label) VALUES ($1, $2), ($3, 'Resource')
+         ON CONFLICT (id) DO NOTHING`,
+        [input.subjectId, input.subjectKind === 'user' ? 'User' : 'Team', input.resourceId],
+      );
+      await client.query(
+        `INSERT INTO kg_edges (src, rel, dst, props)
+         VALUES ($1, 'GRANTED', $2, jsonb_build_object('role', $3::text))
+         ON CONFLICT DO NOTHING`,
+        [input.subjectId, input.resourceId, input.role],
+      );
 
       await enqueue(client, {
         topic: TOPIC.authorization,
@@ -86,6 +111,12 @@ export class PostgresGrantRepository implements GrantRepository {
         await client.query('COMMIT');
         return { seq: await this.currentSeq(), revoked: null };
       }
+
+      await client.query(
+        `DELETE FROM kg_edges
+          WHERE rel = 'GRANTED' AND src = $1 AND dst = $2 AND props->>'role' = $3`,
+        [row.subject_id, row.resource_id, row.role],
+      );
 
       await enqueue(client, {
         topic: TOPIC.authorization,
@@ -145,7 +176,10 @@ export class PostgresGrantRepository implements GrantRepository {
 
   async currentSeq(): Promise<number> {
     const { rows } = await this.pool.query<{ seq: string }>(
-      'SELECT COALESCE(max(id), 0)::text AS seq FROM outbox',
+      `SELECT COALESCE(
+         pg_sequence_last_value(pg_get_serial_sequence('outbox', 'id')::regclass),
+         0
+       )::text AS seq`,
     );
     return Number(rows[0]?.seq ?? 0);
   }

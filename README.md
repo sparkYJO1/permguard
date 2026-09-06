@@ -1,18 +1,40 @@
 # permguard
 
-A permission service that answers one question — *can user X do Y on resource
-Z?* — with permissions inherited through nested teams and nested resources.
+**Somebody was fired at 14:31. At 14:32, can they still read the repository?**
 
-The interesting part is not the question. It is what happens after you take a
-permission away.
+A permission service with grants inherited through nested teams and nested
+resources. It answers *can user X do Y on resource Z* — and three questions a
+boolean cannot: *why*, *who else*, and *what breaks if I revoke this*.
+
+```
+                                    ┌──────────── api ×3 ────────────┐
+POST /admin/grants ──┐              │  L1 in-process  →  L2 Redis    │
+                     ▼              │        ↓ miss                  │
+   ┌──── Postgres ───────┐          │  recursive CTE  ── /check      │
+   │  grants + outbox    │          └────────────────────────────────┘
+   │  kg_nodes/kg_edges  │                     ▲        ▲
+   │  audit_log          │                     │        │ generation++
+   └─────────────────────┘                     │        │
+        │ one transaction                      │   Redpanda
+        │                                      │        ▲
+        └── outbox relay ──────────────────────┴────────┘
+                                               │
+                        worker ── projects ──► Neo4j ── /explain /reachable
+                              └── audit_log
+```
 
 ```bash
 docker compose up -d --wait     # no API keys, nothing to configure
 open http://localhost:3900
 ```
 
-Three API nodes, a worker, Postgres, Redis and Redpanda. First run builds the
-images, so it takes a few minutes; after that it is seconds.
+Three API nodes, a worker, Postgres, Neo4j, Redis and Redpanda. The first run
+builds the images and takes a few minutes; after that it is seconds.
+
+Two things are measured rather than asserted, and both are on this page: how
+long a revoke takes to reach every node, and which of two knowledge graphs
+answers a traversal faster. The second one deleted a database and then put it
+back.
 
 ## The window
 
@@ -25,10 +47,10 @@ So this repository publishes a number rather than an adjective:
 --- invalidation window: revoke committed -> every node denies ---
 rounds      30
 nodes       3
-p50         34 ms
-p95         51 ms
-max         54 ms
-min          9 ms
+p50         42 ms
+p95         68 ms
+max         71 ms
+min         10 ms
 relay poll  50 ms (OUTBOX_POLL_MS; the largest term below)
 
 Backstop, if the event is lost entirely: 5000 ms.
@@ -44,15 +66,22 @@ revoked user only needs one node that still says yes.
 
 **What it does not.** It is one laptop, one broker, three nodes, no network
 between them. The shape of the result would survive a real deployment; the
-constants would not.
+constants would not. Run it with the API containers stopped
+(`docker compose stop api1 api2 api3 worker web`) or the benchmark's own nodes
+compete with them for the same cores and the numbers drift upward as the run
+goes on — which is visible in the `resolution` line when it happens.
 
 **Where the time goes.** The window is roughly *U(0, relay poll interval) + 4 ms*:
 
 | `OUTBOX_POLL_MS` | p50 | p95 |
 |---|---|---|
 | 5 | 9 ms | 15 ms |
-| 50 (default) | 34 ms | 51 ms |
+| 50 (default) | 42 ms | 68 ms |
 | 200 | 121 ms | 201 ms |
+
+Measured with the whole stack running on one laptop, which is also why these are
+a few milliseconds worse than an earlier run taken before Neo4j was part of it.
+The store is not in the invalidation path; it is in the CPU.
 
 The floor of 4 ms is the pipeline itself — relay publish, Redpanda, consumer,
 generation advance. Everything above it is waiting for the next poll.
@@ -109,44 +138,70 @@ on it. [`test/outbox-atomicity.integration.test.ts`](test/outbox-atomicity.integ
 rolls a transaction back and asserts that the row and the event disappear
 together.
 
-## Five technologies, not six
-
-The plan for this repository named six. Neo4j was removed after it was measured.
+## Two knowledge graphs, and which one answers what
 
 Permission inheritance is a graph, so a graph database is the obvious choice —
-which is exactly why it needed measuring rather than asserting.
-`bench/graph-vs-cte.ts` runs both implementations behind the same interface, on
-the same generated data, checking that they agree before timing either:
+which is exactly why it needed measuring. This repository measured it, removed
+Neo4j, and then put it back when the measurement turned out to be wrong three
+times over. [ADR-0007](docs/decisions/0007-two-knowledge-graphs-measured-properly.md)
+has the full account; [ADR-0005](docs/decisions/0005-the-graph-store-had-to-earn-it.md)
+is the superseded decision, kept rather than quietly rewritten.
+
+The same graph is held twice, in the same shape: a generic property graph in
+Postgres (`kg_nodes` / `kg_edges`, traversed by recursive CTE, written in the
+grant's own transaction) and a Neo4j projection of the same nodes and edges.
+`bench/kg-engines.ts` asks both four questions and asserts they agree before
+timing anything.
 
 ```
-                                            allow (p50/p95)     deny (p50/p95)
-shape    depth   grants        cte            graph          cte          graph
-shallow    2/2    1,000    0.51/0.87       1.66/3.10     0.40/0.56    1.06/2.19
-medium     5/6   10,000    0.43/0.52       1.02/1.63     0.38/0.51    0.89/1.33
-deep     10/12   40,000    0.58/0.95       0.79/1.30     0.36/0.46    0.96/1.76
-unreal   20/25  200,000    0.94/1.10       0.65/0.95     0.38/0.51    1.33/2.05
+                                          p50 / p95 ms
+large   depth 8/10   180 users   25,001 grants
+  Q1 check   pg-kg  2.09/ 3.44   neo4j  0.95/ 2.15   (relational 0.73/1.72)
+  Q2 why     pg-kg  3.26/ 5.21   neo4j  0.82/ 1.62
+  Q3 who     pg-kg 23.82/48.91   neo4j 20.28/26.63
+  Q4 blast   pg-kg 92.59/137.20  neo4j 33.28/40.51
 ```
 
-The curves cross. At `unreal` — teams 20 deep, resources 25 deep — Cypher wins
-the allow case. That shape is not one an organisation produces. At every shape
-that does occur, the recursive CTE wins or ties on allow and wins the deny case
-outright, and deny is both the common case and the expensive one.
+Full table for all three shapes: [`ops/measurements/kg-engines.txt`](ops/measurements/kg-engines.txt).
 
-So the graph store bought nothing and would have cost a projection, a projection
-lag, an ordering constraint on invalidation, and a container. It was cut. The
-losing implementation is still in the tree and still runnable —
-`npm run bench:graph` — because a decision you cannot re-derive in one command
-gets re-argued from memory later. [ADR-0005](docs/decisions/0005-the-graph-store-had-to-earn-it.md).
+The slope matters more than the numbers. From the smallest shape to the largest
+the graph grows 50x, and **Q4 goes 2.95 → 92.59 ms in Postgres and 2.52 → 33.28
+ms in Neo4j**; **Q2 stays flat in Neo4j** (1.09 → 0.82) while Postgres roughly
+doubles. Traversal cost tracking the neighbourhood rather than the database is
+the thing a graph store claims, and it is visible here.
 
-What remains, and why:
+So the answers are split by question rather than by preference:
+
+| endpoint | engine | why |
+|---|---|---|
+| `/check` | normalized relational | Fastest at every size, is the source of truth, and sits behind two cache tiers |
+| `/explain`, `/reachable` | Neo4j | Wins the traversals, and wins by more as the graph grows |
+| `/impact` | Postgres property graph | Neo4j is 2.8x faster and still wrong for this: the answer is acted on *immediately*, and a projection may be tens of ms behind the graph being changed |
+
+Every response names the engine that answered and whether it could have been
+stale.
+
+### The three mistakes are the useful part
+
+| | cost | what it was |
+|---|---|---|
+| Walking from the wrong end | **60x** | The same check is 142ms from the resource, 2.3ms from the user. Neo4j walks whatever you point it at; the resource end has hundreds of incoming edges per node. `npm run bench:direction` re-runs it |
+| Adding a property index | **35x, backwards** | An index on `GRANTED.role`, added for fairness, made the check 1.34 → 47ms. The planner pulled 175,008 relationships and filtered them against a nine-element set. In a graph store adjacency *is* the index |
+| A projection that only added | wrong answers | `syncTopology` merged and never deleted, so one benchmark shape's data survived into the next. The agreement assertion caught it |
+
+None of these were findings about Neo4j. All three were mine, and the first
+benchmark shipped a conclusion built on the first of them.
+
+### What each technology is for
 
 | | |
 |---|---|
-| **Postgres** | Grants, identity, audit, and the outbox. The only source of truth, and after the measurement above, the thing that answers the check |
-| **Redis** | L2 decision cache, shared between nodes. Losing it costs latency and never correctness — every call falls through to computing the answer |
-| **Redpanda** | Invalidation fan-out to every node, plus the audit consumer. Three nodes needing the same message is what a log is for |
+| **Postgres** | Grants, identity, audit, the outbox, and a property graph written in the same transaction as the grant. The only source of truth |
+| **Neo4j** | A projection of that graph, and the fastest way to walk it. Allowed to lag; never asked a question where lag would be wrong |
+| **Redis** | L2 decision cache, shared between nodes. Losing it costs latency and never correctness |
+| **Redpanda** | Invalidation fan-out to every node, plus the audit and projector consumers. Three nodes needing the same message is what a log is for |
 | **NestJS** | Module boundaries that hold the bounded contexts apart. Nothing outside a context can reach its `Pool` |
-| **Next.js** | The window is a claim about time across three processes. A table of numbers does not show that; the timeline does |
+| **Next.js** | The window is a claim about time across three processes, and `why` is a claim about paths. Neither is a table of numbers |
 
 ## The decisions worth arguing about
 
@@ -156,8 +211,9 @@ What remains, and why:
 | [ADR-0002](docs/decisions/0002-fail-closed-and-what-it-costs.md) | Fail closed when Postgres is gone, and never cache an `unavailable` deny |
 | [ADR-0003](docs/decisions/0003-postgres-is-the-only-truth.md) | No read model, so no projection lag. Includes the ordering bug the removed design had to work around |
 | [ADR-0004](docs/decisions/0004-every-answer-says-where-it-came-from.md) | Every answer carries its source and generation, on every response, not behind a flag |
-| [ADR-0005](docs/decisions/0005-the-graph-store-had-to-earn-it.md) | Neo4j measured against a recursive CTE, and removed |
+| [ADR-0005](docs/decisions/0005-the-graph-store-had-to-earn-it.md) | **Superseded.** Neo4j removed on a benchmark that measured one question and got the query direction wrong. Kept intact |
 | [ADR-0006](docs/decisions/0006-no-negative-permissions-in-v1.md) | No `deny` rules in v1. Writing down what was left out and why |
+| [ADR-0007](docs/decisions/0007-two-knowledge-graphs-measured-properly.md) | Four questions, two knowledge graphs, and the three errors that made the first answer wrong |
 
 ## The model
 
@@ -220,6 +276,26 @@ curl -H 'x-user-id: mallory' \
 different `atSeq` for the same question are two nodes about to disagree — which
 is what the UI draws. [ADR-0004](docs/decisions/0004-every-answer-says-where-it-came-from.md).
 
+### The questions a boolean cannot answer
+
+```bash
+# why — every path, not the first one. ada reaches this two ways.
+curl -H 'x-user-id: ada' 'localhost:3901/explain?permission=read&resource=repo-core-secrets'
+  → paths: 2   via platform/owner, and via engineering/editor on the parent
+
+# who — the traversal runs backwards
+curl 'localhost:3901/reachable?permission=read&resource=repo-core-secrets'
+  → ada (2 paths), grace (1), linus (1)
+
+# impact — what a revoke would actually take away, before doing it
+curl 'localhost:3901/impact/engineering/editor/repo-core?permission=write'
+  → ada loses repo-core; grace loses repo-core and repo-core-secrets
+  → ada keeps repo-core-secrets, because platform owns it outright
+```
+
+That last exclusion is why `/impact` is a subtraction and not a listing, and it
+is the single most common surprise when someone tries to take access away.
+
 ## Tests
 
 ```bash
@@ -229,7 +305,7 @@ pnpm test                    # 13 unit tests, no Docker, no stores
 pnpm run infra:up            # Postgres, Redis, Redpanda
 pnpm build
 pnpm run bootstrap           # schema + seed
-pnpm run test:integration    # 18 tests against the real stores
+pnpm run test:integration    # 28 tests against the real stores
 ```
 
 `pnpm build` is not optional before the last two: the integration tests spawn the
@@ -250,15 +326,21 @@ something faster than what ships.
 
 They assert the properties, not the numbers: that every node denies within a
 second, that no node is still serving a cached allow afterwards, that the audit
-entry outlives the grant row, and that a node which never receives the event
-still converges via the backstop.
+entry outlives the grant row, that a node which never receives the event still
+converges via the backstop, and that the two graph implementations agree on
+every inheritance rule.
+
+Each suite builds its own org and tears it down. They used to assert against the
+demo seed, which meant clicking "revoke" in the UI broke the suite — with a bare
+`expected false to be true` pointing nowhere near the cause, and CI never seeing
+it because CI gets a fresh database.
 
 ## Deliberately not here
 
-Kubernetes. Multi-tenancy. Internationalisation. A dark-mode toggle. Login. A
-configurable rule engine — the role lattice is code, so "who can read this" is a
-question with an answer you can read off the source. Negative permissions, for
-the reasons in [ADR-0006](docs/decisions/0006-no-negative-permissions-in-v1.md).
+Kubernetes. Multi-tenancy. Internationalisation. Login. A configurable rule
+engine — the role lattice is code, so "who can read this" has an answer you can
+read off the source. Negative permissions, for the reasons in
+[ADR-0006](docs/decisions/0006-no-negative-permissions-in-v1.md).
 
 Per-resource-subtree invalidation is the obvious next step and is **not** claimed
 as done: today one grant change cold-starts the whole decision cache, which is
@@ -269,11 +351,15 @@ invisible at this scale and would not be at a high write rate.
 Claude wrote most of this code. The architecture, the trade-offs in
 `docs/decisions/`, and the choice of what to leave out are mine.
 
-The part worth reading is where an agent's proposal was rejected. ADR-0001
-records the precise-eviction design that does not work, ADR-0002 the
-last-known-good fallback that turns an outage into an incident, and ADR-0005 the
-database that was built, wired up, working, and then deleted because the
-benchmark said it was not earning its place.
+The part worth reading is where a proposal was rejected or a measurement was
+wrong. ADR-0001 records the precise-eviction design that does not work, ADR-0002
+the last-known-good fallback that turns an outage into an incident, and ADR-0005
+and ADR-0007 together record a database that was built, deleted on a benchmark,
+and reinstated when the benchmark turned out to be measuring one question with
+the query written backwards.
+
+ADR-0005 is left intact rather than edited. A decision record that quietly
+rewrites itself is worth less than one that shows what it got wrong.
 
 ## Licence
 

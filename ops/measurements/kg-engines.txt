@@ -1,0 +1,73 @@
+
+[small] projecting done, checking agreement ... agree
+  small/Q1 pg-kg ... done
+  small/Q1 neo4j ... done
+  small/Q1 relational ... done
+  small/Q2 pg-kg ... done
+  small/Q2 neo4j ... done
+  small/Q3 pg-kg ... done
+  small/Q3 neo4j ... done
+  small/Q4 pg-kg ... done
+  small/Q4 neo4j ... done
+small   depth 3/3  21 users  501 grants
+  Q1 check   pg-kg     2.10/    6.22   neo4j     1.62/    3.33   (relational     0.91/    2.20)
+  Q2 why     pg-kg     1.86/    2.53   neo4j     1.09/    2.40
+  Q3 who     pg-kg     1.73/    2.21   neo4j     2.57/    5.91
+  Q4 blast   pg-kg     2.95/    3.37   neo4j     2.52/    4.35
+
+
+[medium] projecting done, checking agreement ... agree
+  medium/Q1 pg-kg ... done
+  medium/Q1 neo4j ... done
+  medium/Q1 relational ... done
+  medium/Q2 pg-kg ... done
+  medium/Q2 neo4j ... done
+  medium/Q3 pg-kg ... done
+  medium/Q3 neo4j ... done
+  medium/Q4 pg-kg ... done
+  medium/Q4 neo4j ... done
+medium  depth 5/6  68 users  5001 grants
+  Q1 check   pg-kg     1.26/    2.22   neo4j     1.19/    2.88   (relational     0.96/    1.41)
+  Q2 why     pg-kg     1.90/    5.35   neo4j     1.18/    2.49
+  Q3 who     pg-kg     4.87/    6.58   neo4j     5.33/    6.67
+  Q4 blast   pg-kg    12.13/   14.23   neo4j     8.21/   11.73
+
+
+[large] projecting done, checking agreement ... agree
+  large/Q1 pg-kg ... done
+  large/Q1 neo4j ... done
+  large/Q1 relational ... done
+  large/Q2 pg-kg ... done
+  large/Q2 neo4j ... done
+  large/Q3 pg-kg ... done
+  large/Q3 neo4j ... done
+  large/Q4 pg-kg ... done
+  large/Q4 neo4j ... done
+large   depth 8/10  180 users  25001 grants
+  Q1 check   pg-kg     2.09/    3.44   neo4j     0.95/    2.15   (relational     0.73/    1.72)
+  Q2 why     pg-kg     3.26/    5.21   neo4j     0.82/    1.62
+  Q3 who     pg-kg    23.82/   48.91   neo4j    20.28/   26.63
+  Q4 blast   pg-kg    92.59/  137.20   neo4j    33.28/   40.51
+
+
+=== two knowledge graphs, four questions (p50/p95 ms) ===
+
+small   depth 3/3  21 users  501 grants
+  Q1 check   pg-kg     2.10/    6.22   neo4j     1.62/    3.33   (relational     0.91/    2.20)
+  Q2 why     pg-kg     1.86/    2.53   neo4j     1.09/    2.40
+  Q3 who     pg-kg     1.73/    2.21   neo4j     2.57/    5.91
+  Q4 blast   pg-kg     2.95/    3.37   neo4j     2.52/    4.35
+
+medium  depth 5/6  68 users  5001 grants
+  Q1 check   pg-kg     1.26/    2.22   neo4j     1.19/    2.88   (relational     0.96/    1.41)
+  Q2 why     pg-kg     1.90/    5.35   neo4j     1.18/    2.49
+  Q3 who     pg-kg     4.87/    6.58   neo4j     5.33/    6.67
+  Q4 blast   pg-kg    12.13/   14.23   neo4j     8.21/   11.73
+
+large   depth 8/10  180 users  25001 grants
+  Q1 check   pg-kg     2.09/    3.44   neo4j     0.95/    2.15   (relational     0.73/    1.72)
+  Q2 why     pg-kg     3.26/    5.21   neo4j     0.82/    1.62
+  Q3 who     pg-kg    23.82/   48.91   neo4j    20.28/   26.63
+  Q4 blast   pg-kg    92.59/  137.20   neo4j    33.28/   40.51
+
+(demo data restored)

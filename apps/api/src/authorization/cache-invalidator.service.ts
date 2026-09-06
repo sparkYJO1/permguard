@@ -29,7 +29,7 @@ export class CacheInvalidator implements OnModuleInit, OnModuleDestroy {
   readonly generation: OutboxGeneration;
   private consumerRef: Consumer | null = null;
   private adoptedAt = 0;
-  private adoptedVia: 'event' | 'backstop' | 'start' = 'start';
+  private adoptedVia: 'start' | 'event' | 'backstop' = 'start';
 
   constructor(@Inject(PG) pool: Pool) {
     this.generation = new OutboxGeneration({
@@ -71,11 +71,17 @@ export class CacheInvalidator implements OnModuleInit, OnModuleDestroy {
     await this.consumerRef?.disconnect();
   }
 
-  status(): { generation: number; adoptedAt: number; adoptedVia: string } {
+  /**
+   * `advances.backstop` is the field to watch. A healthy node reaches every
+   * generation through the event stream; a non-zero backstop count means the
+   * poll caught a change an event should have delivered, and that is a broker
+   * problem rather than a statistic.
+   */
+  status() {
     return {
-      generation: this.generation.current(),
       adoptedAt: this.adoptedAt,
       adoptedVia: this.adoptedVia,
+      ...this.generation.stats(),
     };
   }
 }

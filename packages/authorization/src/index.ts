@@ -8,7 +8,10 @@ export * from './infrastructure/caches';
 export * from './infrastructure/generation';
 export * from './infrastructure/postgres-grant-repository';
 
-// Not in the serving path. Kept, and exported, so `bench/graph-vs-cte.ts` can
-// re-run the measurement that took the graph store out of it. ADR-0005.
+export * from './infrastructure/pg-kg-queries';
+export * from './infrastructure/pg-kg-projector';
+export * from './infrastructure/neo4j-queries';
 export * from './infrastructure/neo4j-reachability';
 export * from './infrastructure/neo4j-projector';
+export * from './domain/graph-queries';
+export * from './application/graph-service';

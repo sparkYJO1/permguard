@@ -16,13 +16,35 @@ import type { GrantAddedPayload, GrantRevokedPayload } from '../domain/events';
 export class Neo4jProjector {
   constructor(private readonly driver: Driver) {}
 
-  /** Constraints first: MERGE without them is a full scan per event. */
+  /**
+   * Node constraints only. MERGE without them is a full scan per event.
+   *
+   * There is deliberately **no** index on `GRANTED.role`, and the reason is the
+   * most useful thing this repository learned about Neo4j.
+   *
+   * One was added, in good faith, to match the `(destination, role)` index
+   * Postgres has on `kg_edges` — it seemed unfair to give one store a targeted
+   * index and not the other. It made the boolean check 35x slower: 47ms with
+   * it, 1.34ms without, measured both ways on the same data.
+   *
+   * The plan says why. With the index the planner chose
+   * `DirectedRelationshipIndexSeek` and pulled 175,008 relationships matching
+   * the role list, then filtered them against a nine-element subject set it had
+   * no cardinality estimate for. Without it, it expands those nine subjects'
+   * outgoing edges and touches about one.
+   *
+   * The lesson generalises: in a graph store adjacency *is* the index, so a
+   * property index on a relationship competes with it rather than complementing
+   * it. Postgres's equivalent is a compound index on `(dst, role)` that
+   * supports the join, which is a different thing wearing a similar name.
+   */
   async ensureConstraints(): Promise<void> {
     const statements = [
       'CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.id IS UNIQUE',
       'CREATE CONSTRAINT team_id IF NOT EXISTS FOR (t:Team) REQUIRE t.id IS UNIQUE',
       'CREATE CONSTRAINT resource_id IF NOT EXISTS FOR (r:Resource) REQUIRE r.id IS UNIQUE',
       'CREATE CONSTRAINT meta_id IF NOT EXISTS FOR (m:Meta) REQUIRE m.id IS UNIQUE',
+      'DROP INDEX granted_role IF EXISTS',
     ];
     const session = this.driver.session();
     try {
@@ -33,13 +55,28 @@ export class Neo4jProjector {
   }
 
   /**
-   * Rebuilds users, teams, resources and memberships from Postgres.
+   * Replaces the graph with what Postgres currently holds.
    *
-   * Topology changes are rare and bulk; grants change one at a time and are
-   * applied incrementally below. Treating both the same way would mean either
-   * a full reload on every revoke, or an event type for every table.
+   * The `MATCH (n) DETACH DELETE n` is the fix for a real bug. This method used
+   * to only MERGE, which meant it added and updated but never removed — a node
+   * deleted in Postgres stayed in the graph forever. In the demo that was
+   * invisible because the topology only ever grew. In the benchmark it was not:
+   * the first shape's users survived into the next shape's run, and the
+   * agreement assertion caught the two stores answering `who` differently
+   * because one of them was still holding a previous dataset.
+   *
+   * A projection is rebuilt, not patched. `PgKgProjector.rebuild` truncates for
+   * the same reason.
    */
   async syncTopology(pool: Pool): Promise<void> {
+    {
+      const wipe = this.driver.session();
+      try {
+        await wipe.run('MATCH (n) DETACH DELETE n');
+      } finally {
+        await wipe.close();
+      }
+    }
     const [users, teams, memberships, resources] = await Promise.all([
       pool.query<{ id: string }>('SELECT id FROM users'),
       pool.query<{ id: string; parent_id: string | null }>('SELECT id, parent_id FROM teams'),

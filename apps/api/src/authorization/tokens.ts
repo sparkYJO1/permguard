@@ -9,3 +9,4 @@
 export const DECISION_SERVICE = Symbol('DECISION_SERVICE');
 export const GRANT_REPOSITORY = Symbol('GRANT_REPOSITORY');
 export const L1_CACHE = Symbol('L1_CACHE');
+export const KG_QUERIES = Symbol('KG_QUERIES');

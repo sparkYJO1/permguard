@@ -10,12 +10,13 @@
     "typecheck": "turbo run typecheck",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "infra:up": "docker compose up -d --wait postgres redis redpanda",
+    "infra:up": "docker compose up -d --wait postgres redis redpanda neo4j",
     "infra:down": "docker compose down -v",
     "up": "docker compose up -d --build --wait",
     "down": "docker compose down -v",
     "bench:window": "tsx bench/invalidation-window.ts",
-    "bench:graph": "docker compose --profile bench up -d --wait neo4j && tsx bench/graph-vs-cte.ts",
+    "bench:kg": "tsx bench/kg-engines.ts",
+    "bench:direction": "tsx bench/cypher-direction.ts",
     "bootstrap": "node apps/worker/dist/bootstrap.js"
   },
   "devDependencies": {

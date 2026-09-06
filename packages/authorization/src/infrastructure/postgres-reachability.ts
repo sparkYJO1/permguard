@@ -27,7 +27,10 @@ export class PostgresReachability implements ReachabilityStore {
     // exists because both stores implement the same interface, and answering
     // honestly here is what makes the interface not a lie.
     const { rows } = await this.pool.query<{ seq: string }>(
-      'SELECT COALESCE(max(id), 0)::text AS seq FROM outbox',
+      `SELECT COALESCE(
+         pg_sequence_last_value(pg_get_serial_sequence('outbox', 'id')::regclass),
+         0
+       )::text AS seq`,
     );
     return Number(rows[0]?.seq ?? 0);
   }

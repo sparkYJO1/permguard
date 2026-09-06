@@ -5,6 +5,13 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
-    "typecheck": { "dependsOn": ["^build"] }
+    "typecheck": {
+      // `build` and not just `^build`. Next writes `.next/types` during its
+      // build and the web package's tsconfig includes those files, so running
+      // both tasks for the same package concurrently makes tsc read a directory
+      // that is being written — an intermittent failure that looks like a real
+      // type error and disappears on re-run.
+      "dependsOn": ["^build", "build"]
+    }
   }
 }

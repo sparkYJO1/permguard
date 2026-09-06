@@ -76,3 +76,68 @@ export async function grant(body: {
   });
   return res.json();
 }
+
+export interface PathEdge {
+  rel: 'MEMBER_OF' | 'CHILD_OF' | 'GRANTED';
+  from: string;
+  to: string;
+  role?: string;
+}
+
+export interface Explanation {
+  edges: PathEdge[];
+  viaRole: string;
+  viaSubject: string;
+  viaResource: string;
+}
+
+export interface ExplainResult {
+  allowed: boolean;
+  paths: number;
+  explanations: Explanation[];
+  engine: string;
+  authoritative: boolean;
+}
+
+export interface ReachableResult {
+  users: Array<{ userId: string; paths: number }>;
+  engine: string;
+  authoritative: boolean;
+}
+
+export interface ImpactResult {
+  lost: Array<{ userId: string; resourceId: string }>;
+  engine: string;
+  authoritative: boolean;
+}
+
+export async function explain(
+  userId: string,
+  permission: string,
+  resourceId: string,
+): Promise<ExplainResult> {
+  const res = await fetch(
+    `${NODES[0]!.url}/explain?permission=${permission}&resource=${encodeURIComponent(resourceId)}`,
+    { headers: { 'x-user-id': userId }, cache: 'no-store' },
+  );
+  return res.json();
+}
+
+export async function reachable(permission: string, resourceId: string): Promise<ReachableResult> {
+  const res = await fetch(
+    `${NODES[0]!.url}/reachable?permission=${permission}&resource=${encodeURIComponent(resourceId)}`,
+    { cache: 'no-store' },
+  );
+  return res.json();
+}
+
+export async function impact(
+  g: { subjectId: string; role: string; resourceId: string },
+  permission: string,
+): Promise<ImpactResult> {
+  const res = await fetch(
+    `${NODES[0]!.url}/impact/${encodeURIComponent(g.subjectId)}/${g.role}/${encodeURIComponent(g.resourceId)}?permission=${permission}`,
+    { cache: 'no-store' },
+  );
+  return res.json();
+}

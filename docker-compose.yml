@@ -10,6 +10,9 @@ x-api-env: &api-env
   PGPASSWORD: postgres
   PGDATABASE: permguard
   REDIS_URL: redis://redis:6379
+  NEO4J_URL: bolt://neo4j:7687
+  NEO4J_USER: neo4j
+  NEO4J_PASSWORD: permguard1
   KAFKA_BROKERS: redpanda:9092
   # The backstop poll. Active invalidation is the fast path; this is the bound
   # on how long a node can be stale when the fast path drops a message.
@@ -28,12 +31,11 @@ services:
       timeout: 3s
       retries: 20
 
-  # Not in the serving path. Behind a profile so `docker compose up` does not
-  # start it, and `docker compose --profile bench up -d neo4j` does — which is
-  # all `npm run bench:graph` needs. ADR-0005 is why it is not a dependency of
-  # anything else in this file.
+  # Serves `why`, `who` and `impact` — the three questions that traverse rather
+  # than look up. It is a projection, not a source of truth: Postgres holds the
+  # graph transactionally and Neo4j holds a copy that is faster to walk.
+  # ADR-0007 has the measurement that put it here.
   neo4j:
-    profiles: ["bench"]
     image: neo4j:5-community
     environment:
       NEO4J_AUTH: neo4j/permguard1
@@ -86,6 +88,7 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
       redpanda: { condition: service_healthy }
+      neo4j: { condition: service_healthy }
     restart: "no"
 
   # Outbox relay + graph projector + audit writer. One instance: the relay is

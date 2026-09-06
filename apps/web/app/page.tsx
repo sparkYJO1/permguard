@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { NODES, check, grant, loadGraph, revoke, type Decision, type Graph } from '../lib/api';
 import { GraphView } from './graph-view';
+import { ExplainPanel } from './explain-panel';
 
 interface Sample {
   readonly node: string;
@@ -12,6 +13,19 @@ interface Sample {
 }
 
 const PERMISSIONS = ['read', 'write', 'delete', 'grant'];
+
+/**
+ * The demo's starting state. `grant` is idempotent on the server — re-adding an
+ * existing grant is a no-op and publishes nothing — so this restores whatever
+ * is missing without disturbing what is not.
+ */
+const SEED_GRANTS = [
+  { subjectKind: 'team', subjectId: 'engineering', role: 'editor', resourceId: 'repo-core' },
+  { subjectKind: 'team', subjectId: 'platform', role: 'owner', resourceId: 'repo-core-secrets' },
+  { subjectKind: 'team', subjectId: 'security', role: 'owner', resourceId: 'acme' },
+  { subjectKind: 'team', subjectId: 'contractors', role: 'viewer', resourceId: 'repo-web' },
+  { subjectKind: 'user', subjectId: 'grace', role: 'owner', resourceId: 'repo-web' },
+] as const;
 
 export default function Page() {
   const [graph, setGraph] = useState<Graph | null>(null);
@@ -83,9 +97,12 @@ export default function Page() {
     }, 1500);
   }, [activeGrant]);
 
+  // Restores every seeded grant, not just the one the demo revokes by default.
+  // Restoring one of five meant anyone who revoked something else could not get
+  // back to the starting state from the UI at all.
   const restore = useCallback(async () => {
     setBusy(true);
-    await grant({ subjectKind: 'team', subjectId: 'contractors', role: 'viewer', resourceId: 'repo-web' });
+    for (const g of SEED_GRANTS) await grant(g);
     setTimeout(() => {
       void loadGraph().then(setGraph);
       setSamples([]);
@@ -169,10 +186,25 @@ export default function Page() {
           <button className="primary" onClick={() => void runRevoke()} disabled={busy || !activeGrant}>
             revoke {activeGrant ? `${activeGrant.subjectId} → ${activeGrant.role} on ${activeGrant.resourceId}` : '(nothing to revoke)'}
           </button>
-          <button onClick={() => void restore()} disabled={busy}>restore demo grant</button>
+          <button onClick={() => void restore()} disabled={busy}>restore all demo grants</button>
         </div>
         <Timeline samples={samples} t0={t0} />
       </div>
+
+      <ExplainPanel
+        userId={userId}
+        permission={permission}
+        resourceId={resourceId}
+        activeGrant={
+          activeGrant
+            ? {
+                subjectId: activeGrant.subjectId,
+                role: activeGrant.role,
+                resourceId: activeGrant.resourceId,
+              }
+            : undefined
+        }
+      />
 
       {graph ? <GraphView graph={graph} highlightUser={userId} highlightResource={resourceId} /> : null}
     </main>

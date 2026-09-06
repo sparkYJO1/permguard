@@ -1,10 +1,12 @@
 import { Global, Module, type OnApplicationShutdown } from '@nestjs/common';
 import type { Redis } from 'ioredis';
+import type { Driver } from 'neo4j-driver';
 import type { Pool } from 'pg';
-import { pgPool, redis } from '@permguard/platform';
+import { neo4jDriver, pgPool, redis } from '@permguard/platform';
 
 export const PG = Symbol('PG');
 export const REDIS = Symbol('REDIS');
+export const NEO4J = Symbol('NEO4J');
 
 /**
  * Connections, and nothing else. The domain layers never see these symbols —
@@ -17,8 +19,9 @@ export const REDIS = Symbol('REDIS');
   providers: [
     { provide: PG, useFactory: pgPool },
     { provide: REDIS, useFactory: redis },
+    { provide: NEO4J, useFactory: neo4jDriver },
   ],
-  exports: [PG, REDIS],
+  exports: [PG, REDIS, NEO4J],
 })
 export class PlatformModule implements OnApplicationShutdown {
   constructor() {}
@@ -28,4 +31,4 @@ export class PlatformModule implements OnApplicationShutdown {
   }
 }
 
-export type { Pool, Redis };
+export type { Driver, Pool, Redis };
