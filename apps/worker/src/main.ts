@@ -74,7 +74,7 @@ async function main(): Promise<void> {
       return;
     }
     res.writeHead(404).end();
-  }).listen(3910, () => console.log('[worker] listening on 3910'));
+  }).listen(config.workerPort, () => console.log(`[worker] listening on ${config.workerPort}`));
 
   const shutdown = async (): Promise<void> => {
     await relay.stop();

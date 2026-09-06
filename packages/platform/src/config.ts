@@ -30,4 +30,5 @@ export const config = {
    */
   outboxPollMs: Number(process.env.OUTBOX_POLL_MS ?? 50),
   apiPort: Number(process.env.PORT ?? 3900),
+  workerPort: Number(process.env.WORKER_PORT ?? 3910),
 } as const;

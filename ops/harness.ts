@@ -19,19 +19,34 @@ export interface Node {
  * and would quietly measure something faster than production.
  */
 export async function startWorker(env: NodeJS.ProcessEnv = {}): Promise<ChildProcess> {
+  // A compose stack may already hold 3910. The worker's own port does not
+  // matter to anything here, so take a free one rather than racing for it and
+  // then health-checking somebody else's process.
+  const port = 3910 + (process.pid % 400) + 1;
   const proc = spawn('node', [join(ROOT, 'apps/worker/dist/main.js')], {
-    env: { ...process.env, ...env },
+    env: { ...process.env, WORKER_PORT: String(port), ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   pipeLogs('worker', proc);
-  await waitForHttp('http://localhost:3910/health');
+  await waitForHttp(`http://localhost:${port}/health`);
   return proc;
 }
 
+/**
+ * `NODE_ID` is not cosmetic: it is the Kafka consumer group each node joins.
+ * Two processes claiming the same id land in the same group, which means each
+ * invalidation goes to exactly one of them and the other serves stale allows —
+ * the failure ADR-0001 is about, and one this harness used to cause by picking
+ * `api1` while a `docker compose up` stack was already running under that name.
+ *
+ * So the ids are unique per run. The tests are then safe to run against a full
+ * stack, not just against `infra:up`.
+ */
 export async function startApiNodes(count: number, basePort = 3901): Promise<Node[]> {
   const nodes: Node[] = [];
+  const run = `${process.pid.toString(36)}${Date.now().toString(36).slice(-4)}`;
   for (let i = 0; i < count; i += 1) {
-    const id = `api${i + 1}`;
+    const id = `t${run}-${i + 1}`;
     const port = basePort + i;
     const proc = spawn('node', [join(ROOT, 'apps/api/dist/main.js')], {
       env: { ...process.env, NODE_ID: id, PORT: String(port) },

@@ -11,6 +11,9 @@ docker compose up -d --wait     # no API keys, nothing to configure
 open http://localhost:3900
 ```
 
+Three API nodes, a worker, Postgres, Redis and Redpanda. First run builds the
+images, so it takes a few minutes; after that it is seconds.
+
 ## The window
 
 A cached permission check that is stale is not a performance problem. Somebody
@@ -220,11 +223,25 @@ is what the UI draws. [ADR-0004](docs/decisions/0004-every-answer-says-where-it-
 ## Tests
 
 ```bash
-npm test               # 13 unit tests, no Docker
-npm run infra:up
-npm run bootstrap
-npm run test:integration   # 18 tests against real Postgres, Redis, Redpanda
+pnpm install
+pnpm test                    # 13 unit tests, no Docker, no stores
+
+pnpm run infra:up            # Postgres, Redis, Redpanda
+pnpm build
+pnpm run bootstrap           # schema + seed
+pnpm run test:integration    # 18 tests against the real stores
 ```
+
+`pnpm build` is not optional before the last two: the integration tests spawn the
+compiled binaries rather than importing them, so there has to be something
+compiled to spawn.
+
+They are also safe to run while a full `docker compose up` stack is going. That
+took a fix — the harness used to name its nodes `api1`, which put them in the
+same Kafka consumer group as the running containers, so each invalidation went
+to one cluster or the other and the tests failed with stale allows. Exactly the
+failure [ADR-0001](docs/decisions/0001-active-invalidation-with-a-ttl-backstop.md)
+is about, caused by a name collision.
 
 The integration tests spawn the real compiled binaries as separate processes.
 Importing the worker into the test process would share a Redis client, a Kafka
