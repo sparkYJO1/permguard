@@ -1,0 +1,38 @@
+{
+  "name": "permguard",
+  "private": true,
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "infra:up": "docker compose up -d --wait postgres redis redpanda",
+    "infra:down": "docker compose down -v",
+    "up": "docker compose up -d --build --wait",
+    "down": "docker compose down -v",
+    "bench:window": "tsx bench/invalidation-window.ts",
+    "bench:graph": "docker compose --profile bench up -d --wait neo4j && tsx bench/graph-vs-cte.ts",
+    "bootstrap": "node apps/worker/dist/bootstrap.js"
+  },
+  "devDependencies": {
+    "@swc/cli": "^0.5.2",
+    "@swc/core": "^1.10.1",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "@permguard/audit": "workspace:*",
+    "@permguard/authorization": "workspace:*",
+    "@permguard/identity": "workspace:*",
+    "@permguard/platform": "workspace:*",
+    "@permguard/shared-kernel": "workspace:*",
+    "nestjs-outbox": "github:sparkYJO1/nestjs-outbox#c703c89dd54c31e99ecd931248544ea326b1a2f0",
+    "pg": "^8.13.1",
+    "@types/pg": "^8.11.10"
+  }
+}

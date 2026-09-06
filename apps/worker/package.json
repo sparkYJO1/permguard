@@ -1,0 +1,25 @@
+{
+  "name": "@permguard/worker",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "swc src -d dist --strip-leading-paths --config-file ../../.swcrc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/main.js",
+    "dev": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@permguard/audit": "workspace:*",
+    "@permguard/authorization": "workspace:*",
+    "@permguard/identity": "workspace:*",
+    "@permguard/platform": "workspace:*",
+    "@permguard/shared-kernel": "workspace:*",
+    "nestjs-outbox": "github:sparkYJO1/nestjs-outbox#c703c89dd54c31e99ecd931248544ea326b1a2f0",
+    "kafkajs": "^2.2.4",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10"
+  }
+}

@@ -1,0 +1,42 @@
+round  1  window   22ms  (api1:22ms api2:22ms api3:22ms)  resolution 0.0ms
+round  2  window   34ms  (api1:33ms api3:33ms api2:34ms)  resolution 0.0ms
+round  3  window   44ms  (api1:43ms api2:43ms api3:44ms)  resolution 0.0ms
+round  4  window   30ms  (api3:30ms api2:30ms api1:30ms)  resolution 0.0ms
+round  5  window   51ms  (api3:50ms api1:50ms api2:51ms)  resolution 0.0ms
+round  6  window   47ms  (api1:47ms api3:47ms api2:47ms)  resolution 0.0ms
+round  7  window   34ms  (api3:34ms api1:34ms api2:34ms)  resolution 0.0ms
+round  8  window   39ms  (api3:38ms api1:38ms api2:39ms)  resolution 0.0ms
+round  9  window   34ms  (api1:34ms api2:34ms api3:34ms)  resolution 0.0ms
+round 10  window   39ms  (api1:39ms api2:39ms api3:39ms)  resolution 0.0ms
+round 11  window   35ms  (api1:34ms api3:34ms api2:35ms)  resolution 0.0ms
+round 12  window   24ms  (api2:24ms api1:24ms api3:24ms)  resolution 0.0ms
+round 13  window   29ms  (api1:29ms api2:29ms api3:29ms)  resolution 0.0ms
+round 14  window   54ms  (api3:54ms api2:54ms api1:54ms)  resolution 0.0ms
+round 15  window   29ms  (api2:29ms api3:29ms api1:29ms)  resolution 0.0ms
+round 16  window   29ms  (api1:28ms api2:29ms api3:29ms)  resolution 0.0ms
+round 17  window   24ms  (api1:24ms api3:24ms api2:24ms)  resolution 0.0ms
+round 18  window    9ms  (api2:8ms api3:8ms api1:9ms)  resolution 0.0ms
+round 19  window   43ms  (api3:42ms api2:42ms api1:43ms)  resolution 0.0ms
+round 20  window   12ms  (api3:12ms api1:12ms api2:12ms)  resolution 0.0ms
+round 21  window   11ms  (api2:11ms api1:11ms api3:11ms)  resolution 0.0ms
+round 22  window   22ms  (api3:22ms api1:22ms api2:22ms)  resolution 0.0ms
+round 23  window   15ms  (api2:14ms api1:15ms api3:15ms)  resolution 0.0ms
+round 24  window   46ms  (api1:46ms api2:46ms api3:46ms)  resolution 0.0ms
+round 25  window   39ms  (api1:39ms api3:39ms api2:39ms)  resolution 0.0ms
+round 26  window   25ms  (api1:23ms api3:23ms api2:25ms)  resolution 0.0ms
+round 27  window   38ms  (api1:37ms api2:37ms api3:38ms)  resolution 0.0ms
+round 28  window   30ms  (api1:29ms api2:30ms api3:30ms)  resolution 0.0ms
+round 29  window   40ms  (api3:39ms api2:40ms api1:40ms)  resolution 0.0ms
+round 30  window   34ms  (api3:34ms api2:34ms api1:34ms)  resolution 0.0ms
+
+--- invalidation window: revoke committed -> every node denies ---
+rounds      30
+nodes       3
+p50         34 ms
+p95         51 ms
+max         54 ms
+min         9 ms
+resolution  ~1 ms (median gap between successive checks on a node)
+relay poll  50 ms (OUTBOX_POLL_MS; the largest term below)
+
+Backstop, if the event is lost entirely: GENERATION_BACKSTOP_MS (5000ms). That is the honest worst case, and it is the reason the poll exists.

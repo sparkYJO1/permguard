@@ -1,0 +1,15 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+
+# pnpm 10 does not run a dependency's lifecycle scripts unless it is named here.
+# `nestjs-outbox` is a git dependency and is not published to npm, so its
+# `prepare` script is what compiles it at install time. Without this line the
+# install succeeds and leaves a package whose `main` points at a `dist/` that
+# was never built.
+#
+# Allowing scripts for a dependency is a real decision, not a formality: it runs
+# that repository's code on this machine at install time. It is allowed here for
+# exactly one package, which is one I control.
+onlyBuiltDependencies:
+  - nestjs-outbox

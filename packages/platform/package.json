@@ -1,0 +1,18 @@
+{
+  "name": "@permguard/platform",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "swc src -d dist --strip-leading-paths --config-file ../../.swcrc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ioredis": "^5.4.2",
+    "kafkajs": "^2.2.4",
+    "neo4j-driver": "^5.27.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": { "@types/pg": "^8.11.10" }
+}
