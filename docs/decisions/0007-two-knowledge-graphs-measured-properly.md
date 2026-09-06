@@ -32,39 +32,36 @@ they return identical sets before timing anything.
 
 ## The measurement
 
-```
-                                          p50 / p95 ms
+Three independent runs, all committed under [`ops/measurements/`](../../ops/measurements/),
+because one run of this benchmark is not a result: cell to cell the numbers move
+by a factor of two.
 
-small   depth 3/3    21 users     501 grants
-  Q1 check   pg-kg  2.10/ 6.22   neo4j  1.62/ 3.33   (relational 0.91/2.20)
-  Q2 why     pg-kg  1.86/ 2.53   neo4j  1.09/ 2.40
-  Q3 who     pg-kg  1.73/ 2.21   neo4j  2.57/ 5.91
-  Q4 blast   pg-kg  2.95/ 3.37   neo4j  2.52/ 4.35
+The first run had Neo4j winning all four questions at the largest shape. The
+next two did not reproduce that, and the honest table is the intersection.
+At `large` — 180 users, 25,001 grants — across all three runs:
 
-medium  depth 5/6    68 users   5,001 grants
-  Q1 check   pg-kg  1.26/ 2.22   neo4j  1.19/ 2.88   (relational 0.96/1.41)
-  Q2 why     pg-kg  1.90/ 5.35   neo4j  1.18/ 2.49
-  Q3 who     pg-kg  4.87/ 6.58   neo4j  5.33/ 6.67
-  Q4 blast   pg-kg 12.13/14.23   neo4j  8.21/11.73
+| | Neo4j | Postgres KG | verdict |
+|---|---|---|---|
+| **Q2 why** | 0.82 – 1.56 | 3.26 – 3.44 | Neo4j, 2–4x |
+| **Q4 blast** | 32.2 – 34.0 | 81.0 – 92.6 | Neo4j, ~2.5x |
+| Q3 who | 20.3 – 21.4 | 21.7 – 23.8 | tie |
+| Q1 check | 0.95 – 2.29 | 1.90 – 2.09 | noise; relational wins both at 0.88 – 1.09 |
 
-large   depth 8/10  180 users  25,001 grants
-  Q1 check   pg-kg  2.09/ 3.44   neo4j  0.95/ 2.15   (relational 0.73/1.72)
-  Q2 why     pg-kg  3.26/ 5.21   neo4j  0.82/ 1.62
-  Q3 who     pg-kg 23.82/48.91   neo4j 20.28/26.63
-  Q4 blast   pg-kg 92.59/137.20  neo4j 33.28/40.51
-```
+The two Neo4j wins are the two questions with **no early exit and a backward
+walk**. That is not a coincidence and it is the only part of this worth
+generalising.
 
-The absolute numbers matter less than the slope. From `small` to `large` the
-graph grows 50x in grants:
+The slope is the robust result. From `small` to `large` the graph grows 50x:
 
-- **Q4 blast**: pg-kg 2.95 → 92.59 (31x). Neo4j 2.52 → 33.28 (13x).
-- **Q2 why**: pg-kg 1.86 → 3.26. Neo4j 1.09 → **0.82** — flat, and slightly
-  faster on the larger graph.
+| | Postgres KG | Neo4j |
+|---|---|---|
+| Q4 blast | 2.5 → 81–93 ms (~30x) | 2.9 → 32–34 ms (~6–11x) |
+| Q2 why | 1.2 → 3.3–3.4 ms (~2.6x) | 1.3 → 0.8–1.6 ms (flat or better) |
 
-That is index-free adjacency behaving as advertised: traversal cost tracks the
-size of the neighbourhood walked, not the size of the database. The recursive
-CTE cannot do that, because every level of the recursion is a join against a
-table that is still growing.
+Traversal cost tracking the neighbourhood rather than the database is what a
+graph store claims, and it is what shows up. A recursive CTE cannot do it,
+because every level of the recursion is a join against a table that is still
+growing.
 
 ## Decision
 
@@ -73,9 +70,13 @@ table that is still growing.
 - `/check` — the hot path — stays on the **normalized relational** schema. It is
   fastest at every size (0.73ms at `large`), it is the source of truth, and it
   is behind two cache tiers anyway.
-- `/explain` and `/reachable` are served by **Neo4j**, which wins them and wins
-  by more as the graph grows.
-- `/impact` is served by **pg-kg**, even though Neo4j is 2.8x faster at it.
+- `/explain` is served by **Neo4j** — Q2, where it wins 2–4x and its lead grows
+  with the graph.
+- `/reachable` is also served by **Neo4j**, and this one is a judgement call
+  rather than a measurement: Q3 is a tie. It is routed there for consistency
+  with `/explain` and because the slope favours it as graphs grow, not because
+  the numbers demand it today.
+- `/impact` is served by **pg-kg**, even though Neo4j is ~2.5x faster at it.
   This is the one traversal whose answer is acted on immediately — someone is
   about to revoke a grant — and answering it from a projection that may be tens
   of milliseconds behind means answering about a graph that is not the one being
@@ -117,8 +118,8 @@ rebuilt, not patched.
 
 ## Rejected
 
-**Serve everything from Neo4j.** It wins three of the four questions, so this
-looks obvious. Rejected because the boolean check is the hot path, the
+**Serve everything from Neo4j.** It wins two of the four questions outright and
+ties a third, so this looks obvious. Rejected because the boolean check is the hot path, the
 relational schema is fastest at it, and that schema is the source of truth —
 routing the most frequent question through a projection would add staleness to
 the one answer that must not have any.
@@ -129,10 +130,13 @@ answer `/impact` correctly. And it is the fallback that makes a Neo4j outage a
 latency problem instead of a feature outage — which is a claim this repository
 can now make honestly, because the numbers behind it are in this file.
 
-**Trust the first benchmark.** It is worth naming as a rejected option, because
-it was the default. A single-question benchmark, a 60x query-direction error and
-a 35x index error all pointed the same way, and the resulting decision — delete
-a database — felt rigorous because it had a table attached to it.
+**Trust the first benchmark.** It is worth naming as a rejected option twice
+over, because it was the default both times. First it was a single-question
+benchmark with a 60x query-direction error and a 35x index error, all pointing
+the same way, and deleting a database felt rigorous because it had a table
+attached. Then the corrected benchmark was run once and quoted, and two of its
+four cells did not survive being re-run. A number is not a measurement until it
+repeats.
 
 ## Consequence
 
@@ -140,5 +144,5 @@ Six technologies, each defensible in one sentence, and one of them is defensible
 only because the first attempt to defend it was wrong in a way that took three
 separate measurements to find.
 
-`npm run bench:kg` re-runs the comparison. `npm run bench:direction` re-runs the
+`pnpm run bench:kg` re-runs the comparison. `pnpm run bench:direction` re-runs the
 60x. Both restore the demo data on a clean exit.

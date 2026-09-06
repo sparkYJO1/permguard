@@ -1,41 +1,51 @@
-round  1  window   16ms  (t1ifvsq8u-2:15ms t1ifvsq8u-1:15ms t1ifvsq8u-3:16ms)  resolution 1.0ms
-round  2  window   20ms  (t1ifvsq8u-1:19ms t1ifvsq8u-2:19ms t1ifvsq8u-3:20ms)  resolution 1.0ms
-round  3  window   71ms  (t1ifvsq8u-1:70ms t1ifvsq8u-2:71ms t1ifvsq8u-3:71ms)  resolution 1.0ms
-round  4  window   27ms  (t1ifvsq8u-1:26ms t1ifvsq8u-3:27ms t1ifvsq8u-2:27ms)  resolution 1.0ms
-round  5  window   21ms  (t1ifvsq8u-1:20ms t1ifvsq8u-3:21ms t1ifvsq8u-2:21ms)  resolution 1.0ms
-round  6  window   61ms  (t1ifvsq8u-1:60ms t1ifvsq8u-3:61ms t1ifvsq8u-2:61ms)  resolution 1.0ms
-round  7  window   22ms  (t1ifvsq8u-3:21ms t1ifvsq8u-1:21ms t1ifvsq8u-2:22ms)  resolution 1.0ms
-round  8  window   34ms  (t1ifvsq8u-3:33ms t1ifvsq8u-1:33ms t1ifvsq8u-2:34ms)  resolution 0.0ms
-round  9  window   66ms  (t1ifvsq8u-1:58ms t1ifvsq8u-3:62ms t1ifvsq8u-2:66ms)  resolution 0.0ms
-round 10  window   60ms  (t1ifvsq8u-3:59ms t1ifvsq8u-2:60ms t1ifvsq8u-1:60ms)  resolution 0.0ms
-round 11  window   19ms  (t1ifvsq8u-2:18ms t1ifvsq8u-1:19ms t1ifvsq8u-3:19ms)  resolution 0.0ms
-round 12  window   52ms  (t1ifvsq8u-3:52ms t1ifvsq8u-2:52ms t1ifvsq8u-1:52ms)  resolution 0.0ms
-round 13  window   10ms  (t1ifvsq8u-3:9ms t1ifvsq8u-2:10ms t1ifvsq8u-1:10ms)  resolution 0.0ms
-round 14  window   42ms  (t1ifvsq8u-3:42ms t1ifvsq8u-1:42ms t1ifvsq8u-2:42ms)  resolution 0.0ms
-round 15  window   13ms  (t1ifvsq8u-1:13ms t1ifvsq8u-2:13ms t1ifvsq8u-3:13ms)  resolution 0.0ms
-round 16  window   68ms  (t1ifvsq8u-1:61ms t1ifvsq8u-2:68ms t1ifvsq8u-3:68ms)  resolution 0.0ms
-round 17  window   59ms  (t1ifvsq8u-3:58ms t1ifvsq8u-1:59ms t1ifvsq8u-2:59ms)  resolution 0.0ms
-round 18  window   51ms  (t1ifvsq8u-1:51ms t1ifvsq8u-2:51ms t1ifvsq8u-3:51ms)  resolution 0.0ms
-round 19  window   57ms  (t1ifvsq8u-1:55ms t1ifvsq8u-3:56ms t1ifvsq8u-2:57ms)  resolution 0.0ms
-round 20  window   19ms  (t1ifvsq8u-3:15ms t1ifvsq8u-2:17ms t1ifvsq8u-1:19ms)  resolution 0.0ms
-round 21  window   47ms  (t1ifvsq8u-3:46ms t1ifvsq8u-1:46ms t1ifvsq8u-2:47ms)  resolution 0.0ms
-round 22  window   27ms  (t1ifvsq8u-1:25ms t1ifvsq8u-3:25ms t1ifvsq8u-2:27ms)  resolution 0.0ms
-round 23  window   22ms  (t1ifvsq8u-2:21ms t1ifvsq8u-1:22ms t1ifvsq8u-3:22ms)  resolution 0.0ms
-round 24  window   24ms  (t1ifvsq8u-1:24ms t1ifvsq8u-2:24ms t1ifvsq8u-3:24ms)  resolution 0.0ms
-round 25  window   49ms  (t1ifvsq8u-1:47ms t1ifvsq8u-3:48ms t1ifvsq8u-2:49ms)  resolution 0.0ms
-round 26  window   35ms  (t1ifvsq8u-1:34ms t1ifvsq8u-3:34ms t1ifvsq8u-2:35ms)  resolution 0.0ms
-round 27  window   51ms  (t1ifvsq8u-1:48ms t1ifvsq8u-3:50ms t1ifvsq8u-2:51ms)  resolution 0.0ms
-round 28  window   46ms  (t1ifvsq8u-1:45ms t1ifvsq8u-3:46ms t1ifvsq8u-2:46ms)  resolution 0.0ms
-round 29  window   59ms  (t1ifvsq8u-1:56ms t1ifvsq8u-2:57ms t1ifvsq8u-3:59ms)  resolution 0.0ms
-round 30  window   28ms  (t1ifvsq8u-3:28ms t1ifvsq8u-2:28ms t1ifvsq8u-1:28ms)  resolution 0.0ms
+round  1  window   46ms  (t1v9q2xns-3:45ms t1v9q2xns-1:45ms t1v9q2xns-2:46ms)  resolution 1.0ms
+round  2  window   25ms  (t1v9q2xns-3:23ms t1v9q2xns-1:23ms t1v9q2xns-2:25ms)  resolution 1.0ms
+round  3  window   24ms  (t1v9q2xns-1:22ms t1v9q2xns-3:23ms t1v9q2xns-2:24ms)  resolution 1.0ms
+round  4  window   66ms  (t1v9q2xns-2:65ms t1v9q2xns-3:65ms t1v9q2xns-1:66ms)  resolution 1.0ms
+round  5  window   96ms  (t1v9q2xns-1:93ms t1v9q2xns-3:96ms t1v9q2xns-2:96ms)  resolution 1.0ms
+round  6  window   54ms  (t1v9q2xns-2:52ms t1v9q2xns-1:53ms t1v9q2xns-3:54ms)  resolution 1.0ms
+round  7  window   26ms  (t1v9q2xns-2:24ms t1v9q2xns-1:25ms t1v9q2xns-3:26ms)  resolution 1.0ms
+round  8  window   18ms  (t1v9q2xns-2:17ms t1v9q2xns-3:17ms t1v9q2xns-1:18ms)  resolution 0.0ms
+round  9  window   27ms  (t1v9q2xns-3:26ms t1v9q2xns-1:26ms t1v9q2xns-2:27ms)  resolution 1.0ms
+round 10  window   29ms  (t1v9q2xns-3:27ms t1v9q2xns-1:27ms t1v9q2xns-2:29ms)  resolution 0.0ms
+round 11  window   54ms  (t1v9q2xns-3:53ms t1v9q2xns-2:53ms t1v9q2xns-1:54ms)  resolution 0.0ms
+round 12  window   45ms  (t1v9q2xns-1:41ms t1v9q2xns-3:44ms t1v9q2xns-2:45ms)  resolution 0.0ms
+round 13  window   14ms  (t1v9q2xns-1:14ms t1v9q2xns-2:14ms t1v9q2xns-3:14ms)  resolution 0.0ms
+round 14  window   38ms  (t1v9q2xns-3:37ms t1v9q2xns-2:37ms t1v9q2xns-1:38ms)  resolution 0.0ms
+round 15  window   46ms  (t1v9q2xns-2:45ms t1v9q2xns-3:45ms t1v9q2xns-1:46ms)  resolution 0.0ms
+round 16  window   44ms  (t1v9q2xns-3:43ms t1v9q2xns-2:43ms t1v9q2xns-1:44ms)  resolution 0.0ms
+round 17  window   59ms  (t1v9q2xns-2:59ms t1v9q2xns-1:59ms t1v9q2xns-3:59ms)  resolution 0.0ms
+round 18  window   21ms  (t1v9q2xns-3:20ms t1v9q2xns-1:21ms t1v9q2xns-2:21ms)  resolution 0.0ms
+round 19  window   38ms  (t1v9q2xns-3:38ms t1v9q2xns-2:38ms t1v9q2xns-1:38ms)  resolution 0.0ms
+round 20  window   56ms  (t1v9q2xns-1:56ms t1v9q2xns-3:56ms t1v9q2xns-2:56ms)  resolution 0.0ms
+round 21  window   34ms  (t1v9q2xns-1:33ms t1v9q2xns-2:34ms t1v9q2xns-3:34ms)  resolution 0.0ms
+round 22  window   60ms  (t1v9q2xns-2:58ms t1v9q2xns-1:58ms t1v9q2xns-3:60ms)  resolution 0.0ms
+round 23  window   45ms  (t1v9q2xns-2:45ms t1v9q2xns-3:45ms t1v9q2xns-1:45ms)  resolution 0.0ms
+round 24  window   37ms  (t1v9q2xns-3:36ms t1v9q2xns-1:36ms t1v9q2xns-2:37ms)  resolution 0.0ms
+round 25  window   24ms  (t1v9q2xns-3:23ms t1v9q2xns-1:24ms t1v9q2xns-2:24ms)  resolution 0.0ms
+round 26  window   41ms  (t1v9q2xns-2:39ms t1v9q2xns-1:41ms t1v9q2xns-3:41ms)  resolution 0.0ms
+round 27  window   41ms  (t1v9q2xns-1:35ms t1v9q2xns-2:40ms t1v9q2xns-3:41ms)  resolution 0.0ms
+round 28  window   39ms  (t1v9q2xns-3:38ms t1v9q2xns-2:39ms t1v9q2xns-1:39ms)  resolution 0.0ms
+round 29  window   40ms  (t1v9q2xns-1:40ms t1v9q2xns-3:40ms t1v9q2xns-2:40ms)  resolution 0.0ms
+round 30  window   59ms  (t1v9q2xns-2:58ms t1v9q2xns-1:58ms t1v9q2xns-3:59ms)  resolution 0.0ms
+round 31  window   57ms  (t1v9q2xns-2:56ms t1v9q2xns-3:56ms t1v9q2xns-1:57ms)  resolution 0.0ms
+round 32  window   24ms  (t1v9q2xns-3:24ms t1v9q2xns-2:24ms t1v9q2xns-1:24ms)  resolution 0.0ms
+round 33  window   34ms  (t1v9q2xns-2:30ms t1v9q2xns-1:32ms t1v9q2xns-3:34ms)  resolution 1.0ms
+round 34  window   53ms  (t1v9q2xns-3:53ms t1v9q2xns-1:53ms t1v9q2xns-2:53ms)  resolution 0.0ms
+round 35  window   43ms  (t1v9q2xns-1:42ms t1v9q2xns-2:43ms t1v9q2xns-3:43ms)  resolution 0.0ms
+round 36  window   20ms  (t1v9q2xns-2:19ms t1v9q2xns-1:19ms t1v9q2xns-3:20ms)  resolution 0.0ms
+round 37  window   49ms  (t1v9q2xns-1:48ms t1v9q2xns-3:48ms t1v9q2xns-2:49ms)  resolution 0.0ms
+round 38  window   35ms  (t1v9q2xns-2:33ms t1v9q2xns-3:34ms t1v9q2xns-1:35ms)  resolution 0.0ms
+round 39  window   27ms  (t1v9q2xns-1:26ms t1v9q2xns-2:26ms t1v9q2xns-3:27ms)  resolution 0.0ms
+round 40  window   25ms  (t1v9q2xns-2:24ms t1v9q2xns-1:24ms t1v9q2xns-3:25ms)  resolution 0.0ms
 
 --- invalidation window: revoke committed -> every node denies ---
-rounds      30
+rounds      40
 nodes       3
-p50         42 ms
-p95         68 ms
-max         71 ms
-min         10 ms
+p50         40 ms
+p95         66 ms
+max         96 ms
+min         14 ms
 resolution  ~1 ms (median gap between successive checks on a node)
 relay poll  50 ms (OUTBOX_POLL_MS; the largest term below)
 

@@ -45,19 +45,26 @@ So this repository publishes a number rather than an adjective:
 
 ```
 --- invalidation window: revoke committed -> every node denies ---
-rounds      30
+rounds      40
 nodes       3
-p50         42 ms
-p95         68 ms
-max         71 ms
-min         10 ms
+p50         40 ms
+p95         66 ms
+max         96 ms
+min         14 ms
 relay poll  50 ms (OUTBOX_POLL_MS; the largest term below)
 
 Backstop, if the event is lost entirely: 5000 ms.
 ```
 
-`npm run bench:window` reproduces it. The full output is committed at
+`pnpm run bench:window` reproduces it. The full output is committed at
 [`ops/measurements/invalidation-window.txt`](ops/measurements/invalidation-window.txt).
+
+**It will not reproduce exactly.** Across runs on the same laptop p50 lands
+between 28 and 43ms and p95 between 61 and 68ms. That spread is the point of
+publishing the script rather than only the number: what is stable is the shape —
+p50 near half the relay poll interval, p95 a little over one interval, and a
+floor around 10ms that is the pipeline itself. The default is 40 rounds because
+at 20 a single scheduling hiccup moves p95 by 70ms.
 
 **What it measures.** Three API nodes are each asked the same question in a tight
 loop. A grant is revoked. The window is the distance from the write committing to
@@ -76,14 +83,14 @@ goes on — which is visible in the `resolution` line when it happens.
 | `OUTBOX_POLL_MS` | p50 | p95 |
 |---|---|---|
 | 5 | 9 ms | 15 ms |
-| 50 (default) | 42 ms | 68 ms |
+| 50 (default) | 40 ms | 66 ms |
 | 200 | 121 ms | 201 ms |
 
 Measured with the whole stack running on one laptop, which is also why these are
 a few milliseconds worse than an earlier run taken before Neo4j was part of it.
 The store is not in the invalidation path; it is in the CPU.
 
-The floor of 4 ms is the pipeline itself — relay publish, Redpanda, consumer,
+The floor — 10ms in the run above, 4ms when the machine is otherwise idle — is the pipeline itself — relay publish, Redpanda, consumer,
 generation advance. Everything above it is waiting for the next poll.
 
 **And when the event is lost.** 5000 ms, the backstop poll. Active invalidation
@@ -153,30 +160,42 @@ grant's own transaction) and a Neo4j projection of the same nodes and edges.
 `bench/kg-engines.ts` asks both four questions and asserts they agree before
 timing anything.
 
-```
-                                          p50 / p95 ms
-large   depth 8/10   180 users   25,001 grants
-  Q1 check   pg-kg  2.09/ 3.44   neo4j  0.95/ 2.15   (relational 0.73/1.72)
-  Q2 why     pg-kg  3.26/ 5.21   neo4j  0.82/ 1.62
-  Q3 who     pg-kg 23.82/48.91   neo4j 20.28/26.63
-  Q4 blast   pg-kg 92.59/137.20  neo4j 33.28/40.51
-```
+**Three runs, all committed**, because one run of this benchmark is not a
+result — cell to cell the numbers move by a factor of two. What reproduces
+across all three at the largest shape (180 users, 25,001 grants):
 
-Full table for all three shapes: [`ops/measurements/kg-engines.txt`](ops/measurements/kg-engines.txt).
+| | Neo4j | Postgres KG | |
+|---|---|---|---|
+| **Q2 why** | 0.82 – 1.56 ms | 3.26 – 3.44 ms | Neo4j wins, 2–4x |
+| **Q4 blast** | 32.2 – 34.0 ms | 81.0 – 92.6 ms | Neo4j wins, ~2.5x |
+| Q3 who | 20.3 – 21.4 ms | 21.7 – 23.8 ms | tie |
+| Q1 check | 0.95 – 2.29 ms | 1.90 – 2.09 ms | noise — and the relational schema beats both at 0.9–1.1 ms |
 
-The slope matters more than the numbers. From the smallest shape to the largest
-the graph grows 50x, and **Q4 goes 2.95 → 92.59 ms in Postgres and 2.52 → 33.28
-ms in Neo4j**; **Q2 stays flat in Neo4j** (1.09 → 0.82) while Postgres roughly
-doubles. Traversal cost tracking the neighbourhood rather than the database is
-the thing a graph store claims, and it is visible here.
+The first of those runs, quoted in an earlier version of this file, had Neo4j
+winning Q1 and Q3 as well. The next two did not reproduce it. Both are in
+[`ops/measurements/`](ops/measurements/) along with a note saying so.
+
+**The slope is the robust finding, not the cells.** From the smallest shape to
+the largest the graph grows 50x:
+
+| | Postgres KG | Neo4j |
+|---|---|---|
+| **Q4 blast** | 2.5 → 81–93 ms (~30x) | 2.9 → 32–34 ms (~6–11x) |
+| **Q2 why** | 1.2 → 3.3–3.4 ms (~2.6x) | 1.3 → 0.8–1.6 ms (flat or better) |
+
+Traversal cost tracking the neighbourhood rather than the database is the thing
+a graph store claims, and across three runs that is what shows up. The recursive
+CTE cannot do it, because every level of the recursion is a join against a table
+that is still growing.
 
 So the answers are split by question rather than by preference:
 
 | endpoint | engine | why |
 |---|---|---|
 | `/check` | normalized relational | Fastest at every size, is the source of truth, and sits behind two cache tiers |
-| `/explain`, `/reachable` | Neo4j | Wins the traversals, and wins by more as the graph grows |
-| `/impact` | Postgres property graph | Neo4j is 2.8x faster and still wrong for this: the answer is acted on *immediately*, and a projection may be tens of ms behind the graph being changed |
+| `/explain` | Neo4j | Q2, where it wins 2–4x and its lead grows with the graph |
+| `/reachable` | Neo4j | Q3, where the two are **tied**. Routed here for consistency with `/explain`, not because the numbers demand it — said plainly rather than dressed up |
+| `/impact` | Postgres property graph | Q4, where Neo4j is 2.5x faster and still the wrong choice: this answer is acted on *immediately*, and a projection can be tens of ms behind the graph being changed |
 
 Every response names the engine that answered and whether it could have been
 stale.
@@ -185,7 +204,7 @@ stale.
 
 | | cost | what it was |
 |---|---|---|
-| Walking from the wrong end | **60x** | The same check is 142ms from the resource, 2.3ms from the user. Neo4j walks whatever you point it at; the resource end has hundreds of incoming edges per node. `npm run bench:direction` re-runs it |
+| Walking from the wrong end | **60x** | The same check is 142ms from the resource, 2.3ms from the user. Neo4j walks whatever you point it at; the resource end has hundreds of incoming edges per node. `pnpm run bench:direction` re-runs it |
 | Adding a property index | **35x, backwards** | An index on `GRANTED.role`, added for fairness, made the check 1.34 → 47ms. The planner pulled 175,008 relationships and filtered them against a nine-element set. In a graph store adjacency *is* the index |
 | A projection that only added | wrong answers | `syncTopology` merged and never deleted, so one benchmark shape's data survived into the next. The agreement assertion caught it |
 
@@ -302,7 +321,7 @@ is the single most common surprise when someone tries to take access away.
 pnpm install
 pnpm test                    # 13 unit tests, no Docker, no stores
 
-pnpm run infra:up            # Postgres, Redis, Redpanda
+pnpm run infra:up            # Postgres, Neo4j, Redis, Redpanda
 pnpm build
 pnpm run bootstrap           # schema + seed
 pnpm run test:integration    # 28 tests against the real stores

@@ -22,7 +22,11 @@ import { DEMO_REVOKE } from '../apps/worker/src/seed';
  *    flatter the result enormously, because the stale answer being raced is one
  *    that has to exist first.
  */
-const ROUNDS = Number(process.env.ROUNDS ?? 10);
+// 40, not 10. At twenty rounds p95 is the second-slowest sample and one
+// scheduling hiccup moves it by 70ms; at forty it repeats to within a
+// millisecond across runs. A published percentile that does not survive being
+// re-run is not a measurement.
+const ROUNDS = Number(process.env.ROUNDS ?? 40);
 const NODE_COUNT = 3;
 /** Must match what the worker uses, or the phase sampling below is wrong. */
 const RELAY_INTERVAL_MS = Number(process.env.OUTBOX_POLL_MS ?? 50);
