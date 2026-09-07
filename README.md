@@ -59,12 +59,25 @@ Backstop, if the event is lost entirely: 5000 ms.
 `pnpm run bench:window` reproduces it. The full output is committed at
 [`ops/measurements/invalidation-window.txt`](ops/measurements/invalidation-window.txt).
 
-**It will not reproduce exactly.** Across runs on the same laptop p50 lands
-between 28 and 43ms and p95 between 61 and 68ms. That spread is the point of
-publishing the script rather than only the number: what is stable is the shape —
-p50 near half the relay poll interval, p95 a little over one interval, and a
-floor around 10ms that is the pipeline itself. The default is 40 rounds because
-at 20 a single scheduling hiccup moves p95 by 70ms.
+**Only p50 reproduces.** Measured with
+[repeatably](https://github.com/sparkYJO1/repeatably), which runs the benchmark
+three times and reports which numbers repeat:
+
+| at 40 rounds | range across 3 runs | spread | |
+|---|---|---|---|
+| **p50** | 36 – 39 ms | 7.9% | reproducible |
+| p95 | 68 – 94 ms | 37% | **not** |
+| max | 74 – 112 ms | 51% | not — it is an extreme of 40 samples |
+| min | 7 – 12 ms | 50% | not, for the same reason |
+
+An earlier version of this paragraph said the default of 40 rounds made p95
+"repeat to within a millisecond across runs". That was written from two runs
+that happened to agree, and a third disproved it. **p50 is the number to quote
+from this benchmark.** p95 is a range, and quoting a single value for it — which
+this README did — is quoting one run.
+
+The default is 40 rounds rather than 20 because at 20 the p50 moves 43% between
+runs and at 40 it moves 8%. That part held up.
 
 **What it measures.** Three API nodes are each asked the same question in a tight
 loop. A grant is revoked. The window is the distance from the write committing to
